@@ -3,7 +3,6 @@ package com.example.expensetracker.service.impl;
 import java.time.LocalDate;
 import java.util.List;
 
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +13,8 @@ import com.example.expensetracker.mapper.ExpenseMapper;
 import com.example.expensetracker.model.Expense;
 import com.example.expensetracker.repository.ExpenseRepository;
 import com.example.expensetracker.service.ExpenseService;
-import com.example.expensetracker.specs.ExpenseSpecifications;
+import com.example.expensetracker.specs.ExpenseFilterRegistry;
+import com.example.expensetracker.specs.ExpenseFilterStrategy;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +24,7 @@ public class DefaultExpenseService implements ExpenseService {
 
     private final ExpenseMapper expenseMapper;
     private final ExpenseRepository expenseRepository;
+    private final ExpenseFilterRegistry expenseFilterRegistry;
 
     @Override
     @Transactional
@@ -51,29 +52,12 @@ public class DefaultExpenseService implements ExpenseService {
 
     @Override
     public List<ExpenseResponseDTO> findAllBy(String filter, LocalDate start, LocalDate end) {
-        Specification<Expense> specification = null;
-        switch (filter) {
-            case "pastWeek":
-                specification = ExpenseSpecifications.pastWeek();
-                break;
-            case "pastMonth":
-                specification = ExpenseSpecifications.pastMonth();
-                break;
-            case "pastThreeMonth":
-                specification = ExpenseSpecifications.pastThreeMonth();
-                break;
-            case "between":
-                specification = ExpenseSpecifications.between(start, end);
-                break;
-            case "noFilter":
-                break;
-            default:
-                throw new ExpenseAPIException(404, "Bad request", "No supported filter");
+        ExpenseFilterStrategy expenseFilterStrategy = expenseFilterRegistry.getFilterStrategy(filter);
+
+        if (expenseFilterStrategy != null) {
+            return expenseRepository.findAll(expenseFilterStrategy.apply(start, end)).stream().map(expenseMapper::expenseToResponseDTO).toList();
         }
 
-        if (specification != null) {
-            return expenseRepository.findAll(specification).stream().map(expenseMapper::expenseToResponseDTO).toList();
-        }
         return expenseRepository.findAll().stream().map(expenseMapper::expenseToResponseDTO).toList();
     }
 
