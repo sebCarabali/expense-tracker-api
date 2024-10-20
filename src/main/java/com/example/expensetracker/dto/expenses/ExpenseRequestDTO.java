@@ -11,9 +11,11 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import lombok.Builder;
 import lombok.Data;
+import lombok.ToString;
 
 @Data
 @Builder
+@ToString
 public class ExpenseRequestDTO {
 
     @NotNull(message = "Date cannot be null.")
